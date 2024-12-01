@@ -60,7 +60,7 @@ export async function fetchNotificationHistory(): Promise<
     const res = await appStoreServerApiClient.getNotificationHistory(
       pageToken || null,
       {
-        startDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).getTime(),
+        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).getTime(),
         endDate: new Date().getTime(),
       }
     );
