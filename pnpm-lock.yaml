@@ -36,8 +36,8 @@ dependencies:
     specifier: ^18.2.0
     version: 18.3.1(react@18.3.1)
   tushan:
-    specifier: ^0.3.10
-    version: 0.3.10(@babel/core@7.26.0)(ts-node@10.9.2)
+    specifier: ^0.3.12
+    version: 0.3.12(@babel/core@7.26.0)(ts-node@10.9.2)
   vite-express:
     specifier: ^0.5.4
     version: 0.5.5(express@4.21.1)(vite@4.5.5)
@@ -2952,8 +2952,8 @@ packages:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
     dev: false
 
-  /tushan@0.3.10(@babel/core@7.26.0)(ts-node@10.9.2):
-    resolution: {integrity: sha512-OJXubMcBNz+bxSUNqznSJx6AYJG5/QkCFwIL6DyWalNJVKNF1Y69qLgnp4sZ5UnL9i+v7VNd7j1BLwaVZMMTrA==}
+  /tushan@0.3.12(@babel/core@7.26.0)(ts-node@10.9.2):
+    resolution: {integrity: sha512-EwIf/cAJvIUhsgkT3J5VYifPemTEXk8SPwPJAenWLSh79NnT0IEX4cpSfVVSuL0VSxygsxBIwrDYU7JR1QhA2w==}
     dependencies:
       '@arco-design/web-react': 2.64.1(@types/react@18.3.12)(react-dom@18.3.1)(react@18.3.1)
       '@tanstack/react-query': 4.36.1(react-dom@18.3.1)(react@18.3.1)

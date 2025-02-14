@@ -1,6 +1,7 @@
 import {
   Button,
   createTextField,
+  CustomRoute,
   jsonServerProvider,
   ListTable,
   Message,
@@ -9,6 +10,7 @@ import {
 } from 'tushan';
 import { appleTransactionFields } from './fields';
 import { authHTTPClient, authProvider } from './auth';
+import { OrderPage } from './route/Order';
 
 const dataProvider = jsonServerProvider('/api', authHTTPClient);
 
@@ -59,6 +61,10 @@ function App() {
           </>
         }
       />
+
+      <CustomRoute name="order">
+        <OrderPage />
+      </CustomRoute>
     </Tushan>
   );
 }

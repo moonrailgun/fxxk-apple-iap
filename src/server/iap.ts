@@ -51,16 +51,24 @@ export async function verifierIosTransactionInfo(
   return payload;
 }
 
+const limitDays = 1;
+
 export async function fetchNotificationHistory(): Promise<
   NotificationHistoryPayloadType[]
 > {
   let pageToken = null;
   const notifs = [];
+  let i = 0;
   while (true) {
+    i++;
+    console.log('fetching page...', i);
+
     const res = await appStoreServerApiClient.getNotificationHistory(
       pageToken || null,
       {
-        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).getTime(),
+        startDate: new Date(
+          Date.now() - limitDays * 24 * 60 * 60 * 1000
+        ).getTime(),
         endDate: new Date().getTime(),
       }
     );
@@ -93,4 +101,15 @@ export async function fetchNotificationHistory(): Promise<
   }
 
   return notifs;
+}
+
+export async function fetchOrderInfo(orderId: string) {
+  const { status, signedTransactions } =
+    await appStoreServerApiClient.lookUpOrderId(orderId);
+
+  const transactionDecodedPayloadList = await Promise.all(
+    signedTransactions.map((s) => verifierIosTransactionInfo(s))
+  );
+
+  return { status, signedTransactions, transactionDecodedPayloadList };
 }

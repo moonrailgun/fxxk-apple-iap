@@ -2,3 +2,4 @@
 node_modules
 dist
 demo.json
+.DS_Store

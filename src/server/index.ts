@@ -3,7 +3,7 @@ import path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), './.env') });
 import express from 'express';
 import ViteExpress from 'vite-express';
-import { fetchNotificationHistory } from './iap';
+import { fetchNotificationHistory, fetchOrderInfo } from './iap';
 import Fuse from 'fuse.js';
 import { adminAuth, auth, authSecret } from './middleware/auth';
 import jwt from 'jsonwebtoken';
@@ -127,6 +127,11 @@ app.get('/api/appleTransaction', auth(), async (req, res) => {
       .header('x-total-count', String(cachedNotificationHistory.length))
       .json([...cachedNotificationHistory].reverse());
   }
+});
+
+app.get('/api/fetchOrderInfo', auth(), async (req, res) => {
+  const { orderId } = req.query;
+  res.json(await fetchOrderInfo(String(orderId)));
 });
 
 if (process.env.NODE_ENV === 'production') {

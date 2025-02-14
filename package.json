@@ -21,7 +21,7 @@
     "md5": "^2.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "tushan": "^0.3.10",
+    "tushan": "^0.3.12",
     "vite-express": "^0.5.4"
   },
   "devDependencies": {
