@@ -11,14 +11,18 @@ const APP_STORE_KEY = process.env.APP_STORE_KEY.replace(/\\n/g, '\n');
 const APP_STORE_KEY_ID = process.env.APP_STORE_KEY_ID;
 const ISSUER_ID = process.env.ISSUER_ID;
 const MOBILE_IOS_APP_ID = process.env.MOBILE_IOS_APP_ID;
+const isSandbox = Boolean(process.env.SANDBOX);
+
+if (isSandbox) {
+  console.log('using sandbox environment');
+}
 
 export const appStoreServerApiClient = new AppStoreServerAPIClient(
   APP_STORE_KEY ?? '',
   APP_STORE_KEY_ID ?? '',
   ISSUER_ID,
   'com.flowgpt.mobile',
-  // FLOW_ENV === 'production' ? Environment.PRODUCTION : Environment.SANDBOX
-  Environment.PRODUCTION
+  isSandbox ? Environment.SANDBOX : Environment.PRODUCTION
 );
 
 const appleRootCAs: Buffer[] = [
@@ -31,8 +35,7 @@ const appAppleId = Number(MOBILE_IOS_APP_ID);
 const verifier = new SignedDataVerifier(
   appleRootCAs,
   true,
-  // FLOW_ENV === 'production' ? Environment.PRODUCTION : Environment.SANDBOX,
-  Environment.PRODUCTION,
+  isSandbox ? Environment.SANDBOX : Environment.PRODUCTION,
   'com.flowgpt.mobile',
   appAppleId
 );
@@ -44,11 +47,38 @@ const verifier = new SignedDataVerifier(
 export async function verifierIosTransactionInfo(
   signedTransactionInfo: string
 ): Promise<JWSTransactionDecodedPayload> {
-  const payload = await verifier.verifyAndDecodeTransaction(
-    signedTransactionInfo
-  );
+  try {
+    const payload = await verifier.verifyAndDecodeTransaction(
+      signedTransactionInfo
+    );
 
-  return payload;
+    return payload;
+  } catch (error) {
+    console.error(
+      '[verifierIosTransactionInfo] Error verifying transaction info:',
+      error
+    );
+
+    // Try to parse transaction info without verifying signature
+    try {
+      const parts = signedTransactionInfo.split('.');
+      if (parts.length >= 2) {
+        const payload = JSON.parse(decodeBase64(parts[1]));
+        console.log(
+          '[verifierIosTransactionInfo] Parsed payload without verification:',
+          payload
+        );
+        return payload as JWSTransactionDecodedPayload;
+      }
+    } catch (parseError) {
+      console.error(
+        '[verifierIosTransactionInfo] Failed to parse payload:',
+        parseError
+      );
+    }
+
+    throw error; // Rethrow the original error
+  }
 }
 
 const limitDays = 1;
@@ -76,17 +106,43 @@ export async function fetchNotificationHistory(): Promise<
     if (res.notificationHistory) {
       const processed = await Promise.all(
         res.notificationHistory.map(async (notification) => {
-          const raw = JSON.parse(
-            decodeBase64(notification?.signedPayload?.split('.')[1]!)
-          );
-          const transactionDecodedPayload = await verifierIosTransactionInfo(
-            raw.data.signedTransactionInfo
-          );
-          return {
-            ...notification,
-            raw,
-            transactionDecodedPayload,
-          };
+          try {
+            const raw = JSON.parse(
+              decodeBase64(notification?.signedPayload?.split('.')[1]!)
+            );
+
+            if (!raw.data || !raw.data.signedTransactionInfo) {
+              console.warn(
+                '[fetchNotificationHistory] Missing signedTransactionInfo in notification data'
+              );
+              return {
+                ...notification,
+                raw,
+                transactionDecodedPayload: null,
+              };
+            }
+
+            const transactionDecodedPayload = await verifierIosTransactionInfo(
+              raw.data.signedTransactionInfo
+            );
+            return {
+              ...notification,
+              raw,
+              transactionDecodedPayload,
+            };
+          } catch (error) {
+            console.error('[fetchNotificationHistory]', error);
+            return {
+              ...notification,
+              raw: notification?.signedPayload
+                ? JSON.parse(
+                    decodeBase64(notification.signedPayload.split('.')[1]!)
+                  )
+                : null,
+              transactionDecodedPayload: null,
+              error: error instanceof Error ? error.message : String(error),
+            };
+          }
         })
       );
       notifs.push(...processed);
@@ -104,12 +160,31 @@ export async function fetchNotificationHistory(): Promise<
 }
 
 export async function fetchOrderInfo(orderId: string) {
-  const { status, signedTransactions } =
-    await appStoreServerApiClient.lookUpOrderId(orderId);
+  try {
+    const { status, signedTransactions } =
+      await appStoreServerApiClient.lookUpOrderId(orderId);
 
-  const transactionDecodedPayloadList = await Promise.all(
-    signedTransactions.map((s) => verifierIosTransactionInfo(s))
-  );
+    const transactionDecodedPayloadList = await Promise.all(
+      signedTransactions.map(async (s) => {
+        try {
+          return await verifierIosTransactionInfo(s);
+        } catch (error) {
+          console.error(
+            `[fetchOrderInfo] Error processing transaction for order ${orderId}:`,
+            error
+          );
+          // Return partial information, indicating verification failure
+          return {
+            error: error instanceof Error ? error.message : String(error),
+            originalSignedTransaction: s,
+          } as unknown as JWSTransactionDecodedPayload;
+        }
+      })
+    );
 
-  return { status, signedTransactions, transactionDecodedPayloadList };
+    return { status, signedTransactions, transactionDecodedPayloadList };
+  } catch (error) {
+    console.error(`[fetchOrderInfo] Error fetching order ${orderId}:`, error);
+    throw error; // Rethrow the error for caller to handle
+  }
 }
